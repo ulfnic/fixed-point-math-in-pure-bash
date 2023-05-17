@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+# License: GNU Affero General Public License Version 3 (GNU AGPLv3), (c) 2023, Marc Gilligan <marcg@ulfnic.com>
+
+
+[:() {
+	print_stderr() {
+		[[ $FPMIPB__QUIET == '1' ]] || printf "$1" "${@:2}" 1>&2
+	}
+
+
+	# Inital validation and variable localization
+	[[ $4 != ':]' ]] && print_stderr '%s\n' 'missing ‘:]’' && return 1
+	(( $# > 4 )) && print_stderr '%s\n' 'invalid parameters' && return 1
+
+	local \
+		val1=$1 \
+		op=$2 \
+		val2=$3 \
+		precision whole_digits number_re \
+		val1_sign val1_whole val1_precision val1_whole_len val1_precision_len \
+		val2_sign val2_whole val2_precision val2_whole_len val2_precision_len
+
+
+
+	# Validate numbers and divide information into variables
+	number_re='^([+-]?)(0?)0*([0-9]*)\.?([0-9]*)$'
+
+	[[ $val1 =~ $number_re ]] || { print_stderr '%s\n' '"NaN value ‘'"$val1"'’'; return 4; }
+	val1_sign=${BASH_REMATCH[1]}
+	val1_leading_zero=${BASH_REMATCH[2]}
+	val1_whole=${BASH_REMATCH[3]}
+	val1_precision=${BASH_REMATCH[4]}
+	val1_whole_len=${#val1_whole}
+	val1_precision_len=${#val1_precision}
+
+	[[ $val2 =~ $number_re ]] || { print_stderr '%s\n' '"NaN value ‘'"$val1"'’'; return 4; }
+	val2_sign=${BASH_REMATCH[1]}
+	val2_leading_zero=${BASH_REMATCH[2]}
+	val2_whole=${BASH_REMATCH[3]}
+	val2_precision=${BASH_REMATCH[4]}
+	val2_whole_len=${#val2_whole}
+	val2_precision_len=${#val2_precision}
+
+
+
+	# Require values have at least one whole or precision digit
+	[[ $val1_whole ]] || [[ $val1_precision ]] || [[ $val1_leading_zero ]] || { print_stderr '%s\n' '"NaN value ‘'"$val1"'’'; return 4; }
+	[[ $val2_whole ]] || [[ $val2_precision ]] || [[ $val2_leading_zero ]] || { print_stderr '%s\n' '"NaN value ‘'"$val2"'’'; return 4; }
+
+
+
+	# Set sign to a lexicologically safe value that guarantees a positive number will always compare higher than a negative number
+	[[ $val1_sign == '-' ]] && val1_sign='0' || val1_sign='1'
+	[[ $val2_sign == '-' ]] && val2_sign='0' || val2_sign='1'
+
+
+
+	# Define the number of digits both whole and precision values will conform to
+	(( val1_whole_len > val2_whole_len )) && whole_digits=$val1_whole_len || whole_digits=$val2_whole_len
+	(( val1_precision_len > val2_precision_len )) && precision=$val1_precision_len || precision=$val2_precision_len
+
+
+
+	# Validate and normalize operator
+	case $op in
+		'-eq') op='==';;
+		'-ne') op='!=';;
+		'-lt') op='<';;
+		'-gt') op='>';;
+		'-le') op='<=';;
+		'-ge') op='>=';;
+		'='|'=='|'!='|'>'|'<'|'>='|'<=') :;;
+		*)
+			print_stderr '%s\n' 'unsupported operator ‘'"$op"'’'
+			return 1
+	esac
+
+
+
+	# If both values are negative, normalize val1 val2 parameter order by reversing appropriate operators 
+	if [[ $val1_sign == '0' ]] && [[ $val2_sign == '0' ]]; then
+		case $op in
+			'>') op='<';;
+			'<') op='>';;
+			'>=') op='<=';;
+			'<=') op='>=';;
+		esac
+	fi
+
+
+
+	# Normalize whole number and precision character digits for lexicological comparison
+	# Note: %s is used instead of %f to prevent out-of-range errors for numbers that are very large
+	printf -v val1 '%s%*s%s%*s' "$val1_sign" "$whole_digits" "$val1_whole" "$val1_precision" "$((precision - ${#val1_precision}))"
+	printf -v val2 '%s%*s%s%*s' "$val2_sign" "$whole_digits" "$val2_whole" "$val2_precision" "$((precision - ${#val2_precision}))"
+
+	# Switch spaces to zeroes
+	val1=${val1// /0}
+	val2=${val2// /0}
+
+
+
+	# Perform lexicological comparison for ==, !=, >= and <= operators
+	if [[ $op = '=' ]] || [[ ${op:1:1} == '=' ]]; then
+		op=${op:0:1}
+		if [[ $val1 == "$val2" ]]; then
+			[[ $op == '!' ]] && return 2 || return 0
+
+		else
+			[[ $op == '=' ]] && return 2
+			[[ $op == '!' ]] && return 0
+		fi
+	fi
+
+
+
+	# Perform lexicological comparison for > and < operators
+	if [[ $op == '>' ]]; then
+		[[ $val1 > $val2 ]] && return 0 || return 2
+
+	elif [[ $op == '<' ]]; then
+		[[ $val1 < $val2 ]] && return 0 || return 2
+	fi
+}
+
+
+
+# If not sourced, pass relevant parts to [:
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+	if [[ $1 == '-i' ]]; then
+		param_arr=($(</dev/stdin))
+		[: "${param_arr[@]}" "${@:2}"
+		exit $?
+	else
+		[: "$@"
+		exit $?
+	fi
+fi
+
+
+
