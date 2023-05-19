@@ -1,10 +1,12 @@
 # fixed-point-math-in-pure-bash
 
 No subshells, no dependencies, just fixed point math in pure BASH as an executable or sourceable script.
+
+Compatible with positive, negative, whole and precision numbers of tremendous size.
+
 ```bash
 [: 020.000 == 20 :] && echo 'true'
 ```
-Compatible with positive, negative, whole and precision numbers of tremendous size.
 
 ## Syntax
 ```
@@ -16,11 +18,11 @@ printf '%s' 'NUMBER OPERATOR NUMBER' | [: -i :]
 ### NUMBER
 `NUMBER` may be whole or a decimal fixed point, be positive or negative, use arbitrary decimals or, have leading and/or trailing zeros.
 
-Empty values '' or values only containing a decimal . are evaluated as: 0
+Empty values `''` or values only containing a decimal `.` are evaluated as: `0`
 
 Examples of supported `NUMBER` values:
 ```
-1  +1  -1  1.  +1.  -1.  1.2  .2  +.2  -.2  001.200  +001.200  -001.200
+1  +1  -1  01  +01  -01  1.  +1.  -1.  1.2  .2  +.2  -.2  001.200  +001.200  -001.200
 ```
 
 ### OPERATOR
@@ -30,17 +32,17 @@ Examples of supported `NUMBER` values:
 
 Supported `OPERATOR` values:
 ```
-=  ==  !=  '>'  '>='  '<'  '<='  \>  \>=  \<  \<=  -eq  -ne  -gt  -ge  -lt  -le
+=  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le
 ```
 
 ## Examples of use
 ```bash
-if [: 5 -gt 5.1 :]; then
-	echo 'true'
-fi
+[: 020.000 -ge -20 :] && echo 'true'
 ```
 ```bash
-[: 020.000 == 20 :] && echo 'true'
+if [: 5 '>' -5.1 :]; then
+	echo 'true'
+fi
 ```
 ```bash
 i=-2
@@ -52,11 +54,11 @@ done
 [: -i :] <<< '-2.1 < 2' && echo 'true'
 ```
 ```bash
-printf '%s' '10 -ge +010.00' | [: -i :] && echo 'true'
+printf '%s' '.4 >= +00.30' | [: -i :] && echo 'true'
 ```
 
 ## Roadmap
-- [x] Comparison (` =  ==  !=  '>'  '>='  '<'  '<='  \>  \>=  \<  \<=  -eq  -ne  -gt  -ge  -lt  -le `)
+- [x] Comparison (` =  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le `)
 - [ ] Addition (` + `)
 - [ ] Subtraction (` - `)
 - [ ] Multiplication (` '*' `)
