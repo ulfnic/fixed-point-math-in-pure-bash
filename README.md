@@ -4,6 +4,7 @@ No subshells, no dependencies, just fixed point math in pure BASH as an executab
 ```bash
 [: 020.000 == 20 :] && echo 'true'
 ```
+Compatible with positive, negative, whole and precision numbers of tremendous size.
 
 ## Syntax
 ```
@@ -53,6 +54,13 @@ done
 ```bash
 printf '%s' '10 -ge +010.00' | [: -i :] && echo 'true'
 ```
+
+## Roadmap
+- [x] Comparison (` =  ==  !=  '>'  '>='  '<'  '<='  \>  \>=  \<  \<=  -eq  -ne  -gt  -ge  -lt  -le `)
+- [ ] Addition (` + `)
+- [ ] Subtraction (` - `)
+- [ ] Multiplication (` '*' `)
+- [ ] Division (` / `)
 
 ## License
 Licensed under GNU Affero General Public License v3. See LICENSE for details.
