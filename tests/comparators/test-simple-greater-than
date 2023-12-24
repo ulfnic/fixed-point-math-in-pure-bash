@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -o errexit
+source ./tests/.source/params-in-expect-exit-code.sh
+test_exit_code=0
+
+
+run() {
+	expect_exit_code=$1
+	params_in_expect_out || test_exit_code=1
+}
+
+
+# Expect pass
+params_in=(2 '>' 1); run '0'
+params_in=(2 '-gt' 1); run '0'
+
+
+# Expect fail
+params_in=(2 '>' 2); run '2'
+params_in=(2 '-gt' 2); run '2'
+params_in=(2 '>' 3); run '2'
+params_in=(2 '-gt' 3); run '2'
+
+
+exit "$test_exit_code"
+
+
+
