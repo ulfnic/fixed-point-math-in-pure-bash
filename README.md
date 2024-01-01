@@ -4,6 +4,8 @@ No subshells, no dependencies, just fixed point math in pure BASH as an executab
 
 Compatible with positive, negative, whole and precision numbers of tremendous size.
 
+Supported by and tested against all release versions of BASH 3.1+ (2005 onward)
+
 ```bash
 [: 020.000 == 20 :] && echo 'true'
 ```
