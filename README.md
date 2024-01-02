@@ -37,6 +37,14 @@ Supported `OPERATOR` values:
 =  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le
 ```
 
+### Error Codes
+```
+0 = Result is true
+1 = General error
+2 = Result is false
+4 = NUMBER is NaN
+```
+
 ## Examples of use
 ```bash
 [: 020.000 -ge -20 :] && echo 'true'
