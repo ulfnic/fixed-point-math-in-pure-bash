@@ -56,7 +56,9 @@ done
 [: -i :] <<< '-2.1 < 2' && echo 'true'
 ```
 ```bash
-printf '%s' '.4 >= +00.30' | [: -i :] && echo 'true'
+source /path/to/[:
+# [: becomes a function
+[: .1 == 0.10 :] && echo 'true'
 ```
 
 ## Roadmap
