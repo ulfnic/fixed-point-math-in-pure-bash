@@ -17,8 +17,8 @@
 		op=$2 \
 		val2=$3 \
 		precision whole_digits number_re \
-		val1_sign val1_whole val1_precision val1_whole_len val1_precision_len \
-		val2_sign val2_whole val2_precision val2_whole_len val2_precision_len
+		val1_sign val1_leading_zero val1_whole val1_precision val1_whole_len val1_precision_len \
+		val2_sign val2_leading_zero val2_whole val2_precision val2_whole_len val2_precision_len
 
 
 
