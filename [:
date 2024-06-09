@@ -2,6 +2,24 @@
 # License: GNU Affero General Public License Version 3 (GNU AGPLv3), (c) 2023, Marc Gilligan <marcg@ulfnic.com>
 
 
+declare -A fpm__operators=(
+		['-eq']=1
+		['-ne']=1
+		['-lt']=1
+		['-gt']=1
+		['-le']=1
+		['-ge']=1
+		['=']=1
+		['==']=1
+		['!=']=1
+		['>']=1
+		['<']=1
+		['>=']=1
+		['<=']=1
+)
+
+
+
 [:() {
 	print_stderr() {
 		[[ $FPMIPB__QUIET == '1' ]] || printf "$1" "${@:2}" 1>&2
@@ -19,6 +37,14 @@
 		precision whole_digits number_re \
 		val1_sign val1_leading_zero val1_whole val1_precision val1_whole_len val1_precision_len \
 		val2_sign val2_leading_zero val2_whole val2_precision val2_whole_len val2_precision_len
+
+
+
+	# Validate operator
+	if [[ ! ${fpm__operators["$op"]} ]]; then
+		print_stderr '%s' 'unrecognized operator: '"$op"
+		return 1
+	fi
 
 
 
@@ -61,7 +87,7 @@
 
 
 
-	# Validate and normalize operator
+	# Normalize operator
 	case $op in
 		'-eq') op='==';;
 		'-ne') op='!=';;
@@ -69,10 +95,6 @@
 		'-gt') op='>';;
 		'-le') op='<=';;
 		'-ge') op='>=';;
-		'='|'=='|'!='|'>'|'<'|'>='|'<=') :;;
-		*)
-			print_stderr '%s\n' 'unsupported operator ‘'"$op"'’'
-			return 1
 	esac
 
 
