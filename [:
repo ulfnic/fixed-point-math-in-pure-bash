@@ -20,15 +20,17 @@ declare -A fpm__operators=(
 
 
 
+fpm__print_stderr() {
+	[[ $2 ]] && printf '%s'"$2" "ERROR: ${0##*/}, " "${@:3}" 1>&2 || :
+	return "$1"
+}
+
+
+
 [:() {
-	print_stderr() {
-		[[ $FPMIPB__QUIET == '1' ]] || printf "$1" "${@:2}" 1>&2
-	}
-
-
 	# Inital validation and variable localization
-	[[ $4 != ':]' ]] && print_stderr '%s\n' 'missing ‘:]’' && return 1
-	(( $# > 4 )) && print_stderr '%s\n' 'invalid parameters' && return 1
+	(( $# > 4 )) && return $(fpm__print_stderr 1 '%s\n' 'too many parameters')
+	[[ $4 == ':]' ]] || return $(fpm__print_stderr 1 '%s\n' 'missing trailing ‘:]’')
 
 	local \
 		val1=$1 \
@@ -41,17 +43,14 @@ declare -A fpm__operators=(
 
 
 	# Validate operator
-	if [[ ! ${fpm__operators["$op"]} ]]; then
-		print_stderr '%s' 'unrecognized operator: '"$op"
-		return 1
-	fi
+	[[ ${fpm__operators["$op"]} ]] || return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op")
 
 
 
 	# Validate numbers and divide information into variables
 	number_re='^([+-]?)(0?)0*([0-9]*)\.?([0-9]*)$'
 
-	[[ $val1 =~ $number_re ]] || { print_stderr '%s\n' '"NaN value ‘'"$val1"'’'; return 4; }
+	[[ $val1 =~ $number_re ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val1"'`')
 	val1_sign=${BASH_REMATCH[1]}
 	val1_leading_zero=${BASH_REMATCH[2]}
 	val1_whole=${BASH_REMATCH[3]}
@@ -59,7 +58,7 @@ declare -A fpm__operators=(
 	val1_whole_len=${#val1_whole}
 	val1_precision_len=${#val1_precision}
 
-	[[ $val2 =~ $number_re ]] || { print_stderr '%s\n' '"NaN value ‘'"$val1"'’'; return 4; }
+	[[ $val2 =~ $number_re ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val2"'`')
 	val2_sign=${BASH_REMATCH[1]}
 	val2_leading_zero=${BASH_REMATCH[2]}
 	val2_whole=${BASH_REMATCH[3]}
@@ -70,8 +69,8 @@ declare -A fpm__operators=(
 
 
 	# Require values have at least one whole or precision digit
-	[[ $val1_whole ]] || [[ $val1_precision ]] || [[ $val1_leading_zero ]] || { print_stderr '%s\n' '"NaN value ‘'"$val1"'’'; return 4; }
-	[[ $val2_whole ]] || [[ $val2_precision ]] || [[ $val2_leading_zero ]] || { print_stderr '%s\n' '"NaN value ‘'"$val2"'’'; return 4; }
+	[[ $val1_whole ]] || [[ $val1_precision ]] || [[ $val1_leading_zero ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val1"'`')
+	[[ $val2_whole ]] || [[ $val2_precision ]] || [[ $val2_leading_zero ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val2"'`')
 
 
 
