@@ -2,7 +2,7 @@
 # License: GNU Affero General Public License Version 3 (GNU AGPLv3), (c) 2023, Marc Gilligan <marcg@ulfnic.com>
 
 
-declare -A fpm__operator_to_type=(
+declare -A fpm__op_to_type=(
 		['-eq']='comparison'
 		['-ne']='comparison'
 		['-lt']='comparison'
@@ -42,11 +42,9 @@ fpm__print_stderr() {
 		op_type
 
 
-
 	# Set operator type and Validate
-	op_type=${fpm__operator_to_type["$op"]}
+	op_type=${fpm__op_to_type["$op"]}
 	[[ $op_type ]] || return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op")
-
 
 
 	# Validate numbers and divide information into variables
@@ -69,17 +67,9 @@ fpm__print_stderr() {
 	val2_precision_len=${#val2_precision}
 
 
-
 	# Require values have at least one whole or precision digit
 	[[ $val1_whole ]] || [[ $val1_precision ]] || [[ $val1_leading_zero ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val1"'`')
 	[[ $val2_whole ]] || [[ $val2_precision ]] || [[ $val2_leading_zero ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val2"'`')
-
-
-
-	# Set sign to a lexicologically safe value that guarantees a positive number will always compare higher than a negative number
-	[[ $val1_sign == '-' ]] && val1_sign='0' || val1_sign='1'
-	[[ $val2_sign == '-' ]] && val2_sign='0' || val2_sign='1'
-
 
 
 	# Define the number of digits both whole and precision values will conform to
@@ -87,7 +77,30 @@ fpm__print_stderr() {
 	(( val1_precision_len > val2_precision_len )) && precision=$val1_precision_len || precision=$val2_precision_len
 
 
+	if [[ $op_type == 'comparison' ]]; then
+		# Set sign to a lexicologically safe value that guarantees a positive number will always compare higher than a negative number
+		[[ $val1_sign == '-' ]] && val1_sign='0' || val1_sign='1'
+		[[ $val2_sign == '-' ]] && val2_sign='0' || val2_sign='1'
+	fi
 
+
+	# Normalize whole number and precision character digits for lexicological comparison
+	# Note: %s is used instead of %f to prevent out-of-range errors for numbers that are very large
+	printf -v val1 '%s%*s%s%*s' "$val1_sign" "$whole_digits" "$val1_whole" "$val1_precision" "$((precision - ${#val1_precision}))"
+	printf -v val2 '%s%*s%s%*s' "$val2_sign" "$whole_digits" "$val2_whole" "$val2_precision" "$((precision - ${#val2_precision}))"
+
+
+	# Switch spaces to zeroes
+	val1=${val1// /0}
+	val2=${val2// /0}
+
+
+	fpm__handle_"$op_type" || return $?
+}
+
+
+
+fpm__handle_comparison() {
 	# Normalize operator
 	case $op in
 		'-eq') op='==';;
@@ -97,7 +110,6 @@ fpm__print_stderr() {
 		'-le') op='<=';;
 		'-ge') op='>=';;
 	esac
-
 
 
 	# If both values are negative, normalize val1 val2 parameter order by reversing appropriate operators 
@@ -111,18 +123,6 @@ fpm__print_stderr() {
 	fi
 
 
-
-	# Normalize whole number and precision character digits for lexicological comparison
-	# Note: %s is used instead of %f to prevent out-of-range errors for numbers that are very large
-	printf -v val1 '%s%*s%s%*s' "$val1_sign" "$whole_digits" "$val1_whole" "$val1_precision" "$((precision - ${#val1_precision}))"
-	printf -v val2 '%s%*s%s%*s' "$val2_sign" "$whole_digits" "$val2_whole" "$val2_precision" "$((precision - ${#val2_precision}))"
-
-	# Switch spaces to zeroes
-	val1=${val1// /0}
-	val2=${val2// /0}
-
-
-
 	# Perform lexicological comparison for ==, !=, >= and <= operators
 	if [[ $op = '=' ]] || [[ ${op:1:1} == '=' ]]; then
 		op=${op:0:1}
@@ -134,7 +134,6 @@ fpm__print_stderr() {
 			[[ $op == '!' ]] && return 0
 		fi
 	fi
-
 
 
 	# Perform lexicological comparison for > and < operators
