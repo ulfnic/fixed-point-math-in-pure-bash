@@ -2,20 +2,20 @@
 # License: GNU Affero General Public License Version 3 (GNU AGPLv3), (c) 2023, Marc Gilligan <marcg@ulfnic.com>
 
 
-declare -A fpm__operators=(
-		['-eq']=1
-		['-ne']=1
-		['-lt']=1
-		['-gt']=1
-		['-le']=1
-		['-ge']=1
-		['=']=1
-		['==']=1
-		['!=']=1
-		['>']=1
-		['<']=1
-		['>=']=1
-		['<=']=1
+declare -A fpm__operator_to_type=(
+		['-eq']='comparison'
+		['-ne']='comparison'
+		['-lt']='comparison'
+		['-gt']='comparison'
+		['-le']='comparison'
+		['-ge']='comparison'
+		['=']='comparison'
+		['==']='comparison'
+		['!=']='comparison'
+		['>']='comparison'
+		['<']='comparison'
+		['>=']='comparison'
+		['<=']='comparison'
 )
 
 
@@ -38,12 +38,14 @@ fpm__print_stderr() {
 		val2=$3 \
 		precision whole_digits number_re \
 		val1_sign val1_leading_zero val1_whole val1_precision val1_whole_len val1_precision_len \
-		val2_sign val2_leading_zero val2_whole val2_precision val2_whole_len val2_precision_len
+		val2_sign val2_leading_zero val2_whole val2_precision val2_whole_len val2_precision_len \
+		op_type
 
 
 
-	# Validate operator
-	[[ ${fpm__operators["$op"]} ]] || return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op")
+	# Set operator type and Validate
+	op_type=${fpm__operator_to_type["$op"]}
+	[[ $op_type ]] || return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op")
 
 
 
