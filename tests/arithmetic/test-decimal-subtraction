@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -o errexit
+source ./tests/.source/params-in-expect-exit-code.sh
+test_exit_code=0
+
+
+run() {
+	local expect_exit_code=$1
+	[[ $2 ]] && local expect_stdout=$2
+
+	params_in_expect_out || test_exit_code=1
+}
+
+
+params_in=(.0 '-' .0); run '0' '0'
+params_in=(0. '-' 0.); run '0' '0'
+params_in=(.00 '-' .00); run '0' '0'
+params_in=(00. '-' 00.); run '0' '0'
+params_in=(00.00 '-' 00.00); run '0' '0'
+
+
+params_in=(-.0 '-' -.0); run '0' '0'
+params_in=(-0. '-' -0.); run '0' '0'
+params_in=(-.00 '-' -.00); run '0' '0'
+params_in=(-00. '-' -00.); run '0' '0'
+params_in=(-00.00 '-' -00.00); run '0' '0'
+
+
+params_in=(+.0 '-' +.0); run '0' '0'
+params_in=(+0. '-' +0.); run '0' '0'
+params_in=(+.00 '-' +.00); run '0' '0'
+params_in=(+00. '-' +00.); run '0' '0'
+params_in=(+00.00 '-' +00.00); run '0' '0'
+
+
+params_in=(.5 '-' .20); run '0' '0.3'
+params_in=(5 '-' .20); run '0' '4.8'
+params_in=(.5 '-' 20); run '0' '-19.5'
+params_in=(0.5 '-' .20); run '0' '0.3'
+params_in=(5 '-' -.20); run '0' '5.2'
+params_in=(.5 '-' -.20); run '0' '0.7'
+params_in=(5 '-' -.20); run '0' '5.2'
+params_in=(.5 '-' -20); run '0' '20.5'
+params_in=(0.5 '-' -.20); run '0' '0.7'
+params_in=(0.5 '-' -20); run '0' '20.5'
+params_in=(-0.20 '-' 5); run '0' '-5.2'
+params_in=(-5 '-' -.20); run '0' '-4.8'
+params_in=(-.20 '-' -5); run '0' '4.8'
+params_in=(-.5 '-' -.20); run '0' '-0.3'
+params_in=(-5 '-' -.20); run '0' '-4.8'
+params_in=(-.5 '-' -20); run '0' '19.5'
+params_in=(-.5 '-' -.20); run '0' '-0.3'
+params_in=(-.5 '-' -20); run '0' '19.5'
+
+
+params_in=(+.5 '-' +.20); run '0' '0.3'
+params_in=(+5 '-' +.20); run '0' '4.8'
+params_in=(+.5 '-' +20); run '0' '-19.5'
+params_in=(+0.5 '-' +.20); run '0' '0.3'
+params_in=(+5 '-' -.20); run '0' '5.2'
+params_in=(+.5 '-' -.20); run '0' '0.7'
+params_in=(+5 '-' -.20); run '0' '5.2'
+params_in=(+.5 '-' -20); run '0' '20.5'
+params_in=(+0.5 '-' -.20); run '0' '0.7'
+params_in=(+0.5 '-' -20); run '0' '20.5'
+params_in=(-0.20 '-' +5); run '0' '-5.2'
+
+
+params_in=(+00.500 '-' +00.200); run '0' '0.3'
+params_in=(+005 '-' +00.200); run '0' '4.8'
+params_in=(+00.500 '-' +0020); run '0' '-19.5'
+params_in=(+00.500 '-' +00.200); run '0' '0.3'
+params_in=(+005 '-' -00.200); run '0' '5.2'
+params_in=(+00.500 '-' -00.200); run '0' '0.7'
+params_in=(+005 '-' -00.200); run '0' '5.2'
+params_in=(+00.500 '-' -0020); run '0' '20.5'
+params_in=(+00.500 '-' -00.200); run '0' '0.7'
+params_in=(+00.500 '-' -0020); run '0' '20.5'
+params_in=(-00.200 '-' +005); run '0' '-5.2'
+params_in=(-005 '-' -00.200); run '0' '-4.8'
+params_in=(-00.200 '-' -005); run '0' '4.8'
+params_in=(-00.500 '-' -00.200); run '0' '-0.3'
+params_in=(-005 '-' -00.200); run '0' '-4.8'
+params_in=(-00.500 '-' -0020); run '0' '19.5'
+params_in=(-00.500 '-' -00.200); run '0' '-0.3'
+params_in=(-00.500 '-' -0020); run '0' '19.5'
+
+
+exit "$test_exit_code"
+
+
+
