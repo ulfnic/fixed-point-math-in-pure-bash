@@ -1,4 +1,4 @@
-# fixed-point-math-in-pure-bash
+# [: - Fixed point math in pure BASH
 
 No subshells, no dependencies, just fixed point math in pure BASH as an executable or sourceable script.
 
@@ -9,6 +9,15 @@ Supported by and tested against all release versions of BASH 3.1+ (2005 onward)
 ```bash
 [: 020.000 == 20 :] && echo 'true'
 ```
+```bash
+[: 0.1 + -10 :]
+# stdout: -9.9
+```
+## Special Behaviour
+
+If `[:` is sourced, the result of arithematic becomes the value of variable `SOLUTION`. This enables use of `[:` without the performance code of $(subshells).
+
+If `[:` is not sourced, arithematic solutions are printed to stdout. If the shell is interactive the printed solution ends in a newline.
 
 ## Syntax
 ```
@@ -28,16 +37,20 @@ Examples of supported `NUMBER` values:
 ```
 
 ### OPERATOR
-`OPERATOR` can be equal, not-equal, greater-than, greater-or-equal, less-than, or less-or-equal.
+`OPERATOR` can be add, subtract, equal, not-equal, greater-than, greater-or-equal, less-than, or less-or-equal.
 
-= and == are treated as the same
+Arithematic `OPERATOR`s
+```
++  -
+```
 
-Supported `OPERATOR` values:
+Comparison `OPERATOR`s
 ```
 =  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le
 ```
+= and == are treated as the same
 
-### Error Codes
+## Error Codes
 ```
 0 = Result is true
 1 = General error
@@ -64,15 +77,21 @@ done
 [: -i :] <<< '-2.1 < 2' && echo 'true'
 ```
 ```bash
+[: 0.1 + -10 :]
+# stdout: -9.9
+```
+```bash
 source /path/to/[:
-# [: becomes a function
-[: .1 == 0.10 :] && echo 'true'
+# [: becomes a function, arithematic output is available as the value of SOLUTION
+
+[: .1 + 0.10 :] && printf '%s\n' "Answer = ${SOLUTION}"
+# stdout: Answer = 0.2
 ```
 
 ## Roadmap
 - [x] Comparison (` =  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le `)
-- [ ] Addition (` + `)
-- [ ] Subtraction (` - `)
+- [x] Addition (` + `)
+- [x] Subtraction (` - `)
 - [ ] Multiplication (` '*' `)
 - [ ] Division (` / `)
 

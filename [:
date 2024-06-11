@@ -17,6 +17,8 @@ fi
 
 
 [:() {
+	SOLUTION=
+
 	# Inital validation and variable localization
 	(( $# > 4 )) && return $(fpm__print_stderr 1 '%s\n' 'too many parameters')
 	[[ $4 == ':]' ]] || return $(fpm__print_stderr 1 '%s\n' 'missing trailing ‘:]’')
@@ -33,6 +35,7 @@ fi
 
 	# Set operator type and Validate
 	case $op in
+		'+'|'-') op_type='arithmetic' ;;
 		'='|'=='|'!='|'>'|'<'|'>='|'<='|'-eq'|'-ne'|'-lt'|'-gt'|'-le'|'-ge') op_type='comparison' ;;
 		*) return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op") ;;
 	esac
@@ -65,20 +68,13 @@ fi
 
 	# Define the number of digits both whole and precision values will conform to
 	(( val1_whole_len > val2_whole_len )) && whole_digits=$val1_whole_len || whole_digits=$val2_whole_len
-	(( val1_precision_len > val2_precision_len )) && precision=$val1_precision_len || precision=$val2_precision_len
+	(( val1_precision_len > val2_precision_len )) && precision_len=$val1_precision_len || precision_len=$val2_precision_len
 
 
-	if [[ $op_type == 'comparison' ]]; then
-		# Set sign to a lexicologically safe value that guarantees a positive number will always compare higher than a negative number
-		[[ $val1_sign == '-' ]] && val1_sign='0' || val1_sign='1'
-		[[ $val2_sign == '-' ]] && val2_sign='0' || val2_sign='1'
-	fi
-
-
-	# Normalize whole number and precision character digits for lexicological comparison
+	# Normalize whole number and precision character digits for iteration and lexicological comparison
 	# Note: %s is used instead of %f to prevent out-of-range errors for numbers that are very large
-	printf -v val1 '%s%*s%s%*s' "$val1_sign" "$whole_digits" "$val1_whole" "$val1_precision" "$((precision - ${#val1_precision}))"
-	printf -v val2 '%s%*s%s%*s' "$val2_sign" "$whole_digits" "$val2_whole" "$val2_precision" "$((precision - ${#val2_precision}))"
+	printf -v val1 '%*s%s%*s%*s' "$whole_digits" "$val1_whole" "$val1_precision" "$((precision_len - ${#val1_precision}))"
+	printf -v val2 '%*s%s%*s%*s' "$whole_digits" "$val2_whole" "$val2_precision" "$((precision_len - ${#val2_precision}))"
 
 
 	# Switch spaces to zeroes
@@ -91,7 +87,120 @@ fi
 
 
 
+fpm__format_solution() {
+	[[ $solution == 0 ]] && return 0
+
+	[[ $solution ]] && solution=${solution#"${solution%%[!0]*}"}
+	[[ $solution ]] || solution=0
+
+	[[ $solution_precision ]] && solution_precision=${solution_precision%"${solution_precision##*[!0]}"}
+
+	if [[ $solution_precision ]]; then
+		SOLUTION=$solution_sign$solution'.'$solution_precision
+	elif [[ $solution == '0' ]]; then
+		SOLUTION=$solution
+	else
+		SOLUTION=$solution_sign$solution
+	fi
+}
+
+
+
+fpm__handle_arithmetic() {
+	local \
+		digits_len=$(( whole_digits + precision_len - 1 )) \
+		solution_sign solution solution_whole solution_precision temp i num1 num2
+
+
+	# Normalize arithmetic
+	if [[ $val1_sign == '-' ]]; then
+		if [[ $val2_sign == '-' ]]; then
+			# val1 negative, val2 negative
+			if [[ $op == '+' ]]; then 
+				solution_sign='-'
+
+			elif [[ $op == '-' ]]; then
+				temp=$val1 val1=$val2 val2=$temp
+				op='-'
+			fi
+
+		else
+			# val1 negative, val2 positive
+			if [[ $op = '+' ]]; then
+				temp=$val1 val1=$val2 val2=$temp
+				op='-'
+
+			elif [[ $op = '-' ]]; then
+				op='+'
+				solution_sign='-'
+			fi
+		fi
+	elif [[ $val2_sign = '-' ]]; then
+		# val1 positive, val2 negative
+		if [[ $op = '+' ]]; then
+			op='-'
+
+		elif [[ $op = '-' ]]; then
+			op='+'
+		fi
+	fi
+
+
+	if [[ $op == '+' ]]; then
+		local carry=0 sum
+
+		for (( i = digits_len; i > -1; i-- )); do
+			num1=${val1:$i:1}
+			num2=${val2:$i:1}
+
+			sum=$(( num1 + num2 + carry ))
+			if (( sum > 9 )); then
+				carry=${sum:0:1}
+				solution=${sum:1:1}$solution
+			else
+				carry=0
+				solution=$sum$solution
+			fi
+		done
+		[[ $carry == 0 ]] || solution=$carry$solution
+		if [[ $precision_len != 0 ]]; then
+			solution_precision=${solution: -precision_len}
+			solution=${solution:0:-precision_len}
+		fi
+
+	elif [[ $op == '-' ]]; then
+		local borrow=0
+
+		if [[ $val1 < $val2 ]]; then
+			temp=$val1 val1=$val2 val2=$temp
+			solution_sign='-'
+		fi
+
+		for (( i = digits_len; i > -1; i-- )); do
+			num1=${val1:$i:1}; num2=${val2:$i:1}
+			(( borrow == 10 )) && (( num1-- )) && borrow=0
+			(( num1 < num2 )) && borrow=10
+			solution=$(( num1 + borrow - num2 ))$solution
+		done
+
+		if [[ $precision_len != 0 ]]; then
+			solution_precision=${solution: -precision_len}
+			solution=${solution:0:-precision_len}
+		fi
+	fi
+
+
+	fpm__format_solution
+}
+
+
+
 fpm__handle_comparison() {
+	# Prefix values with 1 or 0 according to their +/- sign so positive values will be lexicologically higher than negative values
+	[[ $val1_sign == '-' ]] && val1='0'$val1 || val1='1'$val1
+	[[ $val2_sign == '-' ]] && val2='0'$val2 || val2='1'$val2
+
+
 	# Normalize operator
 	case $op in
 		'-eq') op='==';;
@@ -104,7 +213,7 @@ fpm__handle_comparison() {
 
 
 	# If both values are negative, normalize val1 val2 parameter order by reversing appropriate operators 
-	if [[ $val1_sign == '0' ]] && [[ $val2_sign == '0' ]]; then
+	if [[ $val1_sign == '-' ]] && [[ $val2_sign == '-' ]]; then
 		case $op in
 			'>') op='<';;
 			'<') op='>';;
@@ -138,16 +247,20 @@ fpm__handle_comparison() {
 
 
 
-# If not sourced, pass relevant parts to [:
+# If not sourced, pass relevant parts to [: and print solution if any
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
 	if [[ $1 == '-i' ]]; then
 		param_arr=($(</dev/stdin))
-		[: "${param_arr[@]}" "${@:2}"
-		exit $?
+		[: "${param_arr[@]}" "${@:2}" || exit $?
 	else
-		[: "$@"
-		exit $?
+		[: "$@" || exit $?
 	fi
+
+	if [[ $SOLUTION ]]; then
+		printf '%s' "$SOLUTION"
+		[[ -i ]] && printf '\n'
+	fi
+	exit 0
 fi
 
 
