@@ -2,24 +2,6 @@
 # License: GNU Affero General Public License Version 3 (GNU AGPLv3), (c) 2023, Marc Gilligan <marcg@ulfnic.com>
 
 
-declare -A fpm__op_to_type=(
-		['-eq']='comparison'
-		['-ne']='comparison'
-		['-lt']='comparison'
-		['-gt']='comparison'
-		['-le']='comparison'
-		['-ge']='comparison'
-		['=']='comparison'
-		['==']='comparison'
-		['!=']='comparison'
-		['>']='comparison'
-		['<']='comparison'
-		['>=']='comparison'
-		['<=']='comparison'
-)
-
-
-
 fpm__print_stderr() {
 	[[ $2 ]] && printf '%s'"$2" "ERROR: ${0##*/}, " "${@:3}" 1>&2 || :
 	return "$1"
@@ -43,8 +25,10 @@ fpm__print_stderr() {
 
 
 	# Set operator type and Validate
-	op_type=${fpm__op_to_type["$op"]}
-	[[ $op_type ]] || return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op")
+	case $op in
+		'='|'=='|'!='|'>'|'<'|'>='|'<='|'-eq'|'-ne'|'-lt'|'-gt'|'-le'|'-ge') op_type='comparison' ;;
+		*) return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op") ;;
+	esac
 
 
 	# Validate numbers and divide information into variables
