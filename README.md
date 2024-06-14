@@ -27,9 +27,9 @@ printf '%s' 'NUMBER OPERATOR NUMBER' | [: -i :]
 ```
 
 ### NUMBER
-`NUMBER` may be whole or a decimal fixed point, be positive or negative, use arbitrary decimals or, have leading and/or trailing zeros.
+`NUMBER` may be a positive or negative, whole or decimal, fixed point number with any combination of leading and trailing zeros.
 
-Empty values `''` or values only containing a decimal `.` are evaluated as: `0`
+`NUMBER` must contain at least one digit to not cause a NaN error (see: Error Codes).
 
 Examples of supported `NUMBER` values:
 ```
