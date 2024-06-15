@@ -7,17 +7,25 @@ Compatible with positive, negative, whole and precision numbers of tremendous si
 Supported by and tested against all release versions of BASH 3.1+ (2005 onward)
 
 ```bash
-[: 020.000 == 20 :] && echo 'true'
+[: 020.000 == 20 :] && printf 'true'
+# stdout: true
 ```
 ```bash
-[: 0.1 + -10 :]
-# stdout: -9.9
+printf '20 + -0.30' | [: -i :]
+# stdout: 19.7
+```
+```bash
+source [:
+[: .11 '*' -010 :]
+printf '%s\n' "Answer = ${SOLUTION}"
+# stdout: Answer = -1.1
 ```
 ## Special Behaviour
-
-If `[:` is sourced, the result of arithematic becomes the value of variable `SOLUTION`. This enables use of `[:` without the performance code of $(subshells).
+If `[:` is sourced, the result of arithematic becomes the value of variable `SOLUTION`. This enables use of `[:` without the performance cost of $(subshells).
 
 If `[:` is not sourced, arithematic solutions are printed to stdout. If the shell is interactive the printed solution ends in a newline.
+
+While sourcing is optional for interactive convenience, scripts should always use `source [:` as it nets a minimum >5x speed improvement including the sourcing cost when running one or more equations.
 
 ## Syntax
 ```
@@ -41,7 +49,7 @@ Examples of supported `NUMBER` values:
 
 Arithematic `OPERATOR`s
 ```
-+  -
++  -  '*'
 ```
 
 Comparison `OPERATOR`s
@@ -82,7 +90,7 @@ done
 ```
 ```bash
 source /path/to/[:
-# [: becomes a function, arithematic output is available as the value of SOLUTION
+# [: becomes a function, arithematic output is now the value of SOLUTION
 
 [: .1 + 0.10 :] && printf '%s\n' "Answer = ${SOLUTION}"
 # stdout: Answer = 0.2
@@ -92,7 +100,7 @@ source /path/to/[:
 - [x] Comparison (` =  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le `)
 - [x] Addition (` + `)
 - [x] Subtraction (` - `)
-- [ ] Multiplication (` '*' `)
+- [x] Multiplication (` '*' `)
 - [ ] Division (` / `)
 
 ## License
