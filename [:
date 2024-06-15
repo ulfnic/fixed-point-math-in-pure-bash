@@ -27,7 +27,7 @@ fi
 		val1=$1 \
 		op=$2 \
 		val2=$3 \
-		precision whole_digits number_re \
+		precision whole_len number_re \
 		val1_sign val1_leading_zero val1_whole val1_precision val1_whole_len val1_precision_len \
 		val2_sign val2_leading_zero val2_whole val2_precision val2_whole_len val2_precision_len \
 		op_type
@@ -35,7 +35,7 @@ fi
 
 	# Set operator type and Validate
 	case $op in
-		'+'|'-') op_type='arithmetic' ;;
+		'+'|'-'|'*') op_type='arithmetic' ;;
 		'='|'=='|'!='|'>'|'<'|'>='|'<='|'-eq'|'-ne'|'-lt'|'-gt'|'-le'|'-ge') op_type='comparison' ;;
 		*) return $(fpm__print_stderr 1 '%s\n' 'unrecognized operator: '"$op") ;;
 	esac
@@ -67,14 +67,21 @@ fi
 
 
 	# Define the number of digits both whole and precision values will conform to
-	(( val1_whole_len > val2_whole_len )) && whole_digits=$val1_whole_len || whole_digits=$val2_whole_len
+	(( val1_whole_len > val2_whole_len )) && whole_len=$val1_whole_len || whole_len=$val2_whole_len
 	(( val1_precision_len > val2_precision_len )) && precision_len=$val1_precision_len || precision_len=$val2_precision_len
 
 
-	# Normalize whole number and precision character digits for iteration and lexicological comparison
+	# Handle multiplication easly as it doesn't need zero normalization
+	if [[ $op == '*' ]]; then
+		fpm__handle_"$op_type"
+		return $?
+	fi
+
+
+	# Normalize whole number and precision character digits for iteration and/or lexicological comparison
 	# Note: %s is used instead of %f to prevent out-of-range errors for numbers that are very large
-	printf -v val1 '%*s%s%*s%*s' "$whole_digits" "$val1_whole" "$val1_precision" "$((precision_len - ${#val1_precision}))"
-	printf -v val2 '%*s%s%*s%*s' "$whole_digits" "$val2_whole" "$val2_precision" "$((precision_len - ${#val2_precision}))"
+	printf -v val1 '%*s%s%*s%*s' "$whole_len" "$val1_whole" "$val1_precision" "$((precision_len - ${#val1_precision}))"
+	printf -v val2 '%*s%s%*s%*s' "$whole_len" "$val2_whole" "$val2_precision" "$((precision_len - ${#val2_precision}))"
 
 
 	# Switch spaces to zeroes
@@ -83,32 +90,13 @@ fi
 
 
 	fpm__handle_"$op_type" || return $?
-}
-
-
-
-fpm__format_solution() {
-	[[ $solution == 0 ]] && return 0
-
-	[[ $solution ]] && solution=${solution#"${solution%%[!0]*}"}
-	[[ $solution ]] || solution=0
-
-	[[ $solution_precision ]] && solution_precision=${solution_precision%"${solution_precision##*[!0]}"}
-
-	if [[ $solution_precision ]]; then
-		SOLUTION=$solution_sign$solution'.'$solution_precision
-	elif [[ $solution == '0' ]]; then
-		SOLUTION=$solution
-	else
-		SOLUTION=$solution_sign$solution
-	fi
-}
+}		 	 	 	 	 		    	   	    		  		 
 
 
 
 fpm__handle_arithmetic() {
 	local \
-		digits_len=$(( whole_digits + precision_len - 1 )) \
+		digits_len=$(( whole_len + precision_len )) \
 		solution_sign solution solution_whole solution_precision temp i num1 num2
 
 
@@ -133,8 +121,12 @@ fpm__handle_arithmetic() {
 			elif [[ $op = '-' ]]; then
 				op='+'
 				solution_sign='-'
+
+			elif [[ $op = '*' ]]; then
+				solution_sign='-'
 			fi
 		fi
+
 	elif [[ $val2_sign = '-' ]]; then
 		# val1 positive, val2 negative
 		if [[ $op = '+' ]]; then
@@ -142,55 +134,182 @@ fpm__handle_arithmetic() {
 
 		elif [[ $op = '-' ]]; then
 			op='+'
-		fi
-	fi
 
-
-	if [[ $op == '+' ]]; then
-		local carry=0 sum
-
-		for (( i = digits_len; i > -1; i-- )); do
-			num1=${val1:$i:1}
-			num2=${val2:$i:1}
-
-			sum=$(( num1 + num2 + carry ))
-			if (( sum > 9 )); then
-				carry=${sum:0:1}
-				solution=${sum:1:1}$solution
-			else
-				carry=0
-				solution=$sum$solution
-			fi
-		done
-		[[ $carry == 0 ]] || solution=$carry$solution
-		if [[ $precision_len != 0 ]]; then
-			solution_precision=${solution: -precision_len}
-			solution=${solution:0:-precision_len}
-		fi
-
-	elif [[ $op == '-' ]]; then
-		local borrow=0
-
-		if [[ $val1 < $val2 ]]; then
-			temp=$val1 val1=$val2 val2=$temp
+		elif [[ $op = '*' ]]; then
 			solution_sign='-'
 		fi
-
-		for (( i = digits_len; i > -1; i-- )); do
-			num1=${val1:$i:1}; num2=${val2:$i:1}
-			(( borrow == 10 )) && (( num1-- )) && borrow=0
-			(( num1 < num2 )) && borrow=10
-			solution=$(( num1 + borrow - num2 ))$solution
-		done
-
-		if [[ $precision_len != 0 ]]; then
-			solution_precision=${solution: -precision_len}
-			solution=${solution:0:-precision_len}
-		fi
 	fi
 
 
-	fpm__format_solution
+	case $op in
+		'+') fpm__handle_arithmetic__addition ;;
+		'-') fpm__handle_arithmetic__subtraction ;;
+		'*') fpm__handle_arithmetic__multiplication ;;
+	esac
+
+
+	fpm__handle_arithmetic__format_output
+	return 0
+}
+
+
+
+fpm__handle_arithmetic__addition(){
+	local carry=0 sum
+
+
+	for (( i = digits_len - 1; i > -1; i-- )); do
+		num1=${val1:$i:1}
+		num2=${val2:$i:1}
+		sum=$(( num1 + num2 + carry ))
+
+
+		if (( sum > 9 )); then
+			carry=${sum:0:1}
+			solution=${sum:1:1}$solution
+
+		else
+			carry=0
+			solution=$sum$solution
+		fi
+	done
+
+
+	[[ $carry == 0 ]] || solution=$carry$solution
+	if [[ $precision_len != 0 ]]; then
+		solution_precision=${solution: -precision_len}
+		solution=${solution:0:-precision_len}
+	fi
+}
+
+
+
+fpm__handle_arithmetic__subtraction() {
+	local borrow=0
+
+
+	if [[ $val1 < $val2 ]]; then
+		temp=$val1 val1=$val2 val2=$temp
+		solution_sign='-'
+	fi
+
+
+	for (( i = digits_len - 1; i > -1; i-- )); do
+		num1=${val1:$i:1}; num2=${val2:$i:1}
+		(( borrow == 10 )) && (( num1-- )) && borrow=0
+		(( num1 < num2 )) && borrow=10
+		solution=$(( num1 + borrow - num2 ))$solution
+	done
+
+
+	if [[ $precision_len != 0 ]]; then
+		solution_precision=${solution: -precision_len}
+		solution=${solution:0:-precision_len}
+	fi
+}
+
+
+
+fpm__handle_arithmetic__multiplication() {	
+	local -a solution_arr=()
+	local zeroes val1_len val2_len carry sum
+
+
+	# Create zero_cache
+	printf -v zeroes '%*s' "$digits_len"
+	zeroes=${zeroes// /0}
+	val1=$val1_whole$val1_precision
+	val2=$val2_whole$val2_precision
+	val1_len=$((val1_whole_len + val1_precision_len))
+	val2_len=$((val2_whole_len + val2_precision_len))
+	precision_len=$(( val1_precision_len + val2_precision_len ))
+
+
+	# Walk val2 backwards
+	for (( i2 = val2_len - 1; i2 > -1; i2-- )); do
+		num2=${val2:$i2:1}
+		solution=
+		carry=0
+
+		[[ $num2 == '0' ]] && continue
+
+		if [[ $num2 == '1' ]]; then
+			solution=$val1
+
+		else
+			# Walk val1 backwards
+			for (( i1 = val1_len - 1; i1 > -1; i1-- )); do
+				num1=${val1:$i1:1}
+				sum=$(( ( num2 * num1 ) + carry ))
+
+				if (( sum > 9 )); then
+					carry=${sum:0:1}
+					solution=${sum:1:1}$solution
+
+				else
+					carry=0
+					solution=$sum$solution
+				fi
+			done
+		fi
+
+		# Zero normalize solution for later addition and add final carry if any
+		if [[ $carry == '0' ]]; then
+			solution=${zeroes:0:i2+1}$solution${zeroes:0:val2_len-i2-1}
+		else
+			solution=${zeroes:0:i2}$carry$solution${zeroes:0:val2_len-i2-1}
+		fi
+
+		solution_arr+=("$solution")
+
+	done
+
+
+	solution=${solution_arr[0]}
+	solution_arr_len=${#solution_arr[@]}
+
+
+	if [[ $solution_arr_len != 1 ]]; then
+		# Add all solutions together
+		digits_len=${#solution}
+		for (( i2 = 1; i2 < solution_arr_len; i2++ )); do
+			val1=$solution
+			val2=${solution_arr[i2]}
+			solution=
+
+			# precision_len is set to zero as the solutions haven't had precision applied to them yet so they should be handled as whole numbers
+			precision_len=0 fpm__handle_arithmetic__addition
+		done
+	fi
+
+
+	# Apply precision splitting of applicable
+	# If arithmetic skipped on a '0' every loop then solution will be empty and not zero normalized which'll break string splitting.
+	# If solution has a value it's save for splitting.
+	if [[ $precision_len != 0 && $solution ]]; then
+		solution_precision=${solution: -precision_len}
+		solution=${solution:0:-precision_len}
+	fi
+}
+
+
+
+fpm__handle_arithmetic__format_output() {
+	[[ $solution ]] && solution=${solution#"${solution%%[!0]*}"}
+
+	# If solution is empty, normalize to zero
+	# Trimming leading zeroes above may also have emptied the solution
+	[[ $solution ]] || solution=0
+
+	[[ $solution_precision ]] && solution_precision=${solution_precision%"${solution_precision##*[!0]}"}
+
+	if [[ $solution_precision ]]; then
+		SOLUTION=$solution_sign$solution'.'$solution_precision
+	elif [[ $solution == '0' ]]; then
+		SOLUTION=$solution
+	else
+		SOLUTION=$solution_sign$solution
+	fi
 }
 
 
