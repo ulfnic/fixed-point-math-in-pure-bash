@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -o errexit
+source ./tests/.source/params-in-expect-exit-code.sh
+test_exit_code=0
+
+
+run() {
+	expect_exit_code=$1
+	params_in_expect_out || test_exit_code=1
+}
+
+
+# Test missing params
+params_in=('' '==' 1); run '1'
+params_in=(1 '==' ''); run '1'
+params_in=(1 '' 1); run '1'
+
+
+# Test word splitting
+params_in=('1 == 1'); run '0'
+
+params_in=('-i')
+
+run '1' <<< '2'
+run '1' <<< '2 + '
+
+run '0' '4' <<< '2 + 2'
+
+
+# Test prevention of glob expansion during word splitting
+run '0' '4' <<< '2 * 2'
+set -f; run '0' '4' <<< '2 * 2'; set +f
+
+params_in=('2 * 2'); run '0' '4'
+set -f; params_in=('2 * 2'); run '0' '4'; set +f
+
+
+exit "$test_exit_code"
+
+
+
