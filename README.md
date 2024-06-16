@@ -7,16 +7,16 @@ Compatible with positive, negative, whole and precision numbers of tremendous si
 Supported by and tested against all release versions of BASH 3.1+ (2005 onward)
 
 ```bash
-[: 020.000 == 20 :] && printf 'true'
+[: 020.000 == 20 :] && printf '%s\n' 'true'
 # stdout: true
 ```
 ```bash
-printf '20 + -0.30' | [: -i :]
-# stdout: 19.7
+printf '%s' '-20 + .30' | [: -i :]
+# stdout: -19.7
 ```
 ```bash
 source [:
-[: .11 '*' -010 :]
+[: '0.11 * -010' :]
 printf '%s\n' "Answer = ${SOLUTION}"
 # stdout: Answer = -1.1
 ```
@@ -29,6 +29,7 @@ While sourcing is optional for interactive convenience, scripts should always us
 
 ## Syntax
 ```
+[: 'NUMBER OPERATOR NUMBER' :]
 [: NUMBER OPERATOR NUMBER :]
 [: -i :] <<< 'NUMBER OPERATOR NUMBER'
 printf '%s' 'NUMBER OPERATOR NUMBER' | [: -i :]
@@ -47,14 +48,16 @@ Examples of supported `NUMBER` values:
 ### OPERATOR
 `OPERATOR` can be add, subtract, equal, not-equal, greater-than, greater-or-equal, less-than, or less-or-equal.
 
+Care should be taken to use proper quoting for operators containing `<`, `>` and `*` to avoid shell interpretation.
+
 Arithematic `OPERATOR`s
 ```
-+  -  '*'
++  -  *
 ```
 
 Comparison `OPERATOR`s
 ```
-=  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le
+=  ==  !=  >  >=  <  <=  -eq  -ne  -gt  -ge  -lt  -le
 ```
 = and == are treated as the same
 
@@ -71,13 +74,13 @@ Comparison `OPERATOR`s
 [: 020.000 -ge -20 :] && echo 'true'
 ```
 ```bash
-if [: 5 '>' -5.1 :]; then
+if [: '5 > -5.1' :]; then
 	echo 'true'
 fi
 ```
 ```bash
 i=-2
-while [: 3.2 -gt $i :]; do
+while [: "3.2 -gt ${i}" :]; do
 	echo "3.2 is greater than $(( i++ ))"
 done
 ```
@@ -97,10 +100,10 @@ source /path/to/[:
 ```
 
 ## Roadmap
-- [x] Comparison (` =  ==  !=  '>'  '>='  '<'  '<='  -eq  -ne  -gt  -ge  -lt  -le `)
+- [x] Comparison (` =  ==  !=  >  >=  <  <=  -eq  -ne  -gt  -ge  -lt  -le `)
 - [x] Addition (` + `)
 - [x] Subtraction (` - `)
-- [x] Multiplication (` '*' `)
+- [x] Multiplication (` * `)
 - [ ] Division (` / `)
 
 ## License
