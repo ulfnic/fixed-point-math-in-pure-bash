@@ -10,8 +10,8 @@ fpm__print_stderr() {
 
 
 if (( BASH_VERSINFO[0] < 3 || ( BASH_VERSINFO[0] == 3 && BASH_VERSINFO[1] < 1 ) )); then
-	fpm__print_stderr '%s\n' 'BASH version required >= 3.1 (released 2005)' 1>&2
-	exit 1
+	fpm__print_stderr 1 '%s\n' 'BASH version required >= 3.1 (released 2005)' 1>&2
+	exit
 fi
 
 
