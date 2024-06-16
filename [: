@@ -19,21 +19,33 @@ fi
 [:() {
 	SOLUTION=
 
-	# Inital validation and variable localization
-	(( $# > 4 )) && return $(fpm__print_stderr 1 '%s\n' 'too many parameters')
-	[[ $4 == ':]' ]] || return $(fpm__print_stderr 1 '%s\n' 'missing trailing ‘:]’')
-
 	local \
-		val1=$1 \
-		op=$2 \
-		val2=$3 \
+		param_str val1 op val2 parent_noglob_set \
 		precision whole_len number_re \
 		val1_sign val1_leading_zero val1_whole val1_precision val1_whole_len val1_precision_len \
 		val2_sign val2_leading_zero val2_whole val2_precision val2_whole_len val2_precision_len \
 		op_type
 
 
-	# Set operator type and Validate
+	# Word split input into an array respecting parent settings
+	# Noting local - is not supported till bash 4.4
+	shopt -q -o noglob && parent_noglob_set=1
+	[[ $parent_noglob_set ]] || set -f
+	if [[ $1 == '-i' ]]; then
+		local -a params_arr=($(</dev/stdin) ${@:2})
+	else
+		local -a params_arr=($*)
+	fi
+	[[ $parent_noglob_set ]] || set +f
+
+
+	# Validate general syntax
+	[[ ${#params_arr[@]} == '4' ]] || return $(fpm__print_stderr 1 '%s\n' 'bad number of parameters')
+	[[ ${params_arr[3]} == ':]' ]] || return $(fpm__print_stderr 1 '%s\n' 'missing trailing ‘:]’')
+
+
+	# Set operator type and validate
+	op=${params_arr[1]}
 	case $op in
 		'+'|'-'|'*') op_type='arithmetic' ;;
 		'='|'=='|'!='|'>'|'<'|'>='|'<='|'-eq'|'-ne'|'-lt'|'-gt'|'-le'|'-ge') op_type='comparison' ;;
@@ -44,7 +56,7 @@ fi
 	# Validate numbers and divide information into variables
 	number_re='^([+-]?)(0?)0*([0-9]*)\.?([0-9]*)$'
 
-	[[ $val1 =~ $number_re ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val1"'`')
+	[[ ${params_arr[0]} =~ $number_re ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val1"'`')
 	val1_sign=${BASH_REMATCH[1]}
 	val1_leading_zero=${BASH_REMATCH[2]}
 	val1_whole=${BASH_REMATCH[3]}
@@ -52,7 +64,7 @@ fi
 	val1_whole_len=${#val1_whole}
 	val1_precision_len=${#val1_precision}
 
-	[[ $val2 =~ $number_re ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val2"'`')
+	[[ ${params_arr[2]} =~ $number_re ]] || return $(fpm__print_stderr 4 '%s\n' 'NaN value: `'"$val2"'`')
 	val2_sign=${BASH_REMATCH[1]}
 	val2_leading_zero=${BASH_REMATCH[2]}
 	val2_whole=${BASH_REMATCH[3]}
@@ -368,12 +380,7 @@ fpm__handle_comparison() {
 
 # If not sourced, pass relevant parts to [: and print solution if any
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
-	if [[ $1 == '-i' ]]; then
-		param_arr=($(</dev/stdin))
-		[: "${param_arr[@]}" "${@:2}" || exit $?
-	else
-		[: "$@" || exit $?
-	fi
+	[: "$@" || exit $?
 
 	if [[ $SOLUTION ]]; then
 		printf '%s' "$SOLUTION"

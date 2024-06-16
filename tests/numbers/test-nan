@@ -11,8 +11,6 @@ run() {
 
 
 # Expect pass
-params_in=('' '==' 1); run '4'
-params_in=(1 '==' ''); run '4'
 params_in=(. '==' 1); run '4'
 params_in=(1 '==' .); run '4'
 params_in=(+ '==' 1); run '4'
