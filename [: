@@ -21,6 +21,7 @@ fi
 
 	local \
 		LANG=C \
+		IFS=$' \t\n' \
 		param_str val1 op val2 parent_noglob_set \
 		precision whole_len number_re \
 		val1_sign val1_leading_zero val1_whole val1_precision val1_whole_len val1_precision_len \
