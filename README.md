@@ -7,18 +7,16 @@ Compatible with positive, negative, whole and precision numbers of tremendous si
 Supported by and tested against all release versions of BASH 3.1+ (2005 onward)
 
 ```bash
+# Optional: source [: to define [: as a function for better performance.
+source [:
+```
+```bash
 [: 020.000 == 20 :] && printf '%s\n' 'true'
 # stdout: true
 ```
 ```bash
-printf '%s' '-20 + .30' | [: -i :]
+[: -i :] <<< '-20 + .30'
 # stdout: -19.7
-```
-```bash
-source [:
-[: '0.11 * -010' :]
-printf '%s\n' "Answer = ${SOLUTION}"
-# stdout: Answer = -1.1
 ```
 ## Special Behaviour
 If `[:` is sourced, the result of arithematic becomes the value of variable `SOLUTION`. This enables use of `[:` without the performance cost of $(subshells).
@@ -31,9 +29,10 @@ While sourcing is optional for interactive convenience, scripts should always us
 ```
 [: 'NUMBER OPERATOR NUMBER' :]
 [: NUMBER OPERATOR NUMBER :]
-[: -i :] <<< 'NUMBER OPERATOR NUMBER'
-printf '%s' 'NUMBER OPERATOR NUMBER' | [: -i :]
+[: -i :]
 ```
+### -i
+Read `NUMBER` `OPERATOR` `NUMBER` from stdin using standard IFS (spaces, tabs and newlines).
 
 ### NUMBER
 `NUMBER` may be a positive or negative, whole or decimal, fixed point number with any combination of leading and trailing zeros.
@@ -71,6 +70,18 @@ Comparison `OPERATOR`s
 
 ## Examples of use
 ```bash
+source [:
+# [: becomes a function and arithematic solutions are now the value of SOLUTION
+
+[: .1 + 0.10 :] && printf '%s\n' "Answer = ${SOLUTION}"
+# stdout: Answer = 0.2
+```
+```bash
+# If [: is not sourced arithematic solutions are printed to stdout
+[: 0.1 + -10 :]
+# stdout: -9.9
+```
+```bash
 [: 020.000 -ge -20 :] && echo 'true'
 ```
 ```bash
@@ -86,17 +97,6 @@ done
 ```
 ```bash
 [: -i :] <<< '-2.1 < 2' && echo 'true'
-```
-```bash
-[: 0.1 + -10 :]
-# stdout: -9.9
-```
-```bash
-source /path/to/[:
-# [: becomes a function, arithematic output is now the value of SOLUTION
-
-[: .1 + 0.10 :] && printf '%s\n' "Answer = ${SOLUTION}"
-# stdout: Answer = 0.2
 ```
 
 ## Roadmap
